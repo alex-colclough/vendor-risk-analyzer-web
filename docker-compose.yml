@@ -16,7 +16,7 @@ services:
       # Alternative: IAM credentials (if not using API key)
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-anthropic.claude-3-5-sonnet-20241022-v2:0}
+      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-us.anthropic.claude-3-5-sonnet-20241022-v2:0}
       - CORS_ORIGINS=["http://localhost:3001"]
     volumes:
       - upload_data:/tmp/analyzer-uploads

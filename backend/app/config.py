@@ -60,8 +60,9 @@ class Settings(BaseSettings):
     aws_bearer_token_bedrock: Optional[str] = Field(default=None)
 
     # Bedrock Configuration
+    # Use inference profile ID (us./eu./apac. prefix) for API key auth
     bedrock_model_id: str = Field(
-        default="anthropic.claude-3-5-sonnet-20241022-v2:0"
+        default="us.anthropic.claude-3-5-sonnet-20241022-v2:0"
     )
     bedrock_max_tokens: int = 4096
     bedrock_temperature: float = 0.3

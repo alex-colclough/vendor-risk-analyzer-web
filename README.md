@@ -114,8 +114,10 @@ The easiest way to run the application is using Docker.
    ```env
    AWS_BEARER_TOKEN_BEDROCK=your_bedrock_api_key_here
    AWS_REGION=us-east-1
-   BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
+   BEDROCK_MODEL_ID=us.anthropic.claude-3-5-sonnet-20241022-v2:0
    ```
+
+   > **Note**: API keys require using an inference profile ID with a geographic prefix (`us.`, `eu.`, `apac.`)
 
    Or use IAM credentials (alternative):
    ```env
@@ -195,7 +197,7 @@ docker compose up -d
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `AWS_REGION` | AWS region for Bedrock | `us-east-1` |
-| `BEDROCK_MODEL_ID` | Claude model ID | `anthropic.claude-3-5-sonnet-20241022-v2:0` |
+| `BEDROCK_MODEL_ID` | Claude inference profile ID | `us.anthropic.claude-3-5-sonnet-20241022-v2:0` |
 | `BEDROCK_MAX_TOKENS` | Max response tokens | `4096` |
 | `BEDROCK_TEMPERATURE` | Model temperature | `0.3` |
 | `MAX_FILE_SIZE_MB` | Max upload file size | `100` |
