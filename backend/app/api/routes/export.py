@@ -122,161 +122,417 @@ async def generate_pdf_report(
     """Generate PDF report from analysis results."""
     from weasyprint import HTML
 
-    # Build HTML report
+    # Get risk assessment data
+    risk = results.get("risk_assessment", {})
+    inherent_score = risk.get("inherent_risk_score", 0)
+    residual_score = risk.get("residual_risk_score", 0)
+    inherent_level = risk.get("inherent_risk_level", "N/A")
+    residual_level = risk.get("residual_risk_level", "N/A")
+    risk_reduction = risk.get("risk_reduction_percentage", 0)
+
+    # Count findings by severity
+    findings = results.get("findings", [])
+    severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for f in findings:
+        sev = f.get("severity", "").lower()
+        if sev in severity_counts:
+            severity_counts[sev] += 1
+
+    # Build HTML report with professional styling
     html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Compliance Analysis Report</title>
+        <title>Vendor Security Assessment Report</title>
         <style>
+            @page {{
+                size: letter;
+                margin: 0.75in;
+                @top-right {{
+                    content: "CONFIDENTIAL";
+                    font-size: 9px;
+                    color: #999;
+                }}
+                @bottom-center {{
+                    content: "Page " counter(page) " of " counter(pages);
+                    font-size: 9px;
+                    color: #666;
+                }}
+            }}
             body {{
-                font-family: Arial, sans-serif;
-                margin: 40px;
-                color: #333;
+                font-family: 'Helvetica Neue', Arial, sans-serif;
+                font-size: 10pt;
+                line-height: 1.5;
+                color: #2d3748;
+            }}
+            .cover-page {{
+                text-align: center;
+                padding-top: 2in;
+                page-break-after: always;
+            }}
+            .cover-title {{
+                font-size: 28pt;
+                font-weight: bold;
+                color: #1a365d;
+                margin-bottom: 0.5in;
+            }}
+            .cover-subtitle {{
+                font-size: 14pt;
+                color: #4a5568;
+                margin-bottom: 1in;
+            }}
+            .cover-meta {{
+                font-size: 11pt;
+                color: #718096;
+                margin-top: 2in;
+            }}
+            .cover-meta p {{
+                margin: 5px 0;
             }}
             h1 {{
+                font-size: 18pt;
                 color: #1a365d;
                 border-bottom: 2px solid #3182ce;
-                padding-bottom: 10px;
+                padding-bottom: 8px;
+                margin-top: 30px;
+                margin-bottom: 15px;
             }}
             h2 {{
+                font-size: 14pt;
                 color: #2c5282;
-                margin-top: 30px;
+                margin-top: 25px;
+                margin-bottom: 10px;
             }}
-            .score-card {{
-                background: #ebf8ff;
-                padding: 20px;
-                border-radius: 8px;
+            h3 {{
+                font-size: 12pt;
+                color: #2d3748;
+                margin-top: 20px;
+                margin-bottom: 8px;
+            }}
+            .section {{
+                margin-bottom: 25px;
+            }}
+            .score-container {{
+                display: flex;
+                justify-content: space-between;
                 margin: 20px 0;
             }}
-            .score {{
-                font-size: 48px;
+            .score-box {{
+                text-align: center;
+                padding: 20px;
+                border-radius: 8px;
+                width: 30%;
+                box-sizing: border-box;
+            }}
+            .score-box.primary {{
+                background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+                color: white;
+            }}
+            .score-box.inherent {{
+                background: #fed7d7;
+                border: 2px solid #fc8181;
+            }}
+            .score-box.residual {{
+                background: #fefcbf;
+                border: 2px solid #f6e05e;
+            }}
+            .score-value {{
+                font-size: 36pt;
                 font-weight: bold;
-                color: #2b6cb0;
+                margin: 10px 0;
+            }}
+            .score-label {{
+                font-size: 10pt;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }}
+            .score-sublabel {{
+                font-size: 9pt;
+                opacity: 0.8;
             }}
             table {{
                 width: 100%;
                 border-collapse: collapse;
-                margin: 20px 0;
-            }}
-            th, td {{
-                border: 1px solid #e2e8f0;
-                padding: 12px;
-                text-align: left;
+                margin: 15px 0;
+                font-size: 9pt;
             }}
             th {{
-                background: #edf2f7;
-                font-weight: bold;
+                background: #2d3748;
+                color: white;
+                padding: 10px 12px;
+                text-align: left;
+                font-weight: 600;
+            }}
+            td {{
+                padding: 10px 12px;
+                border-bottom: 1px solid #e2e8f0;
+            }}
+            tr:nth-child(even) {{
+                background: #f7fafc;
+            }}
+            .severity-badge {{
+                display: inline-block;
+                padding: 3px 10px;
+                border-radius: 12px;
+                font-size: 8pt;
+                font-weight: 600;
+                text-transform: uppercase;
             }}
             .severity-critical {{
-                color: #c53030;
-                font-weight: bold;
+                background: #c53030;
+                color: white;
             }}
             .severity-high {{
-                color: #dd6b20;
+                background: #dd6b20;
+                color: white;
             }}
             .severity-medium {{
-                color: #d69e2e;
+                background: #d69e2e;
+                color: white;
             }}
             .severity-low {{
-                color: #38a169;
+                background: #38a169;
+                color: white;
             }}
             .executive-summary {{
                 background: #f7fafc;
                 padding: 20px;
                 border-left: 4px solid #3182ce;
                 margin: 20px 0;
+                font-size: 10pt;
+            }}
+            .findings-summary {{
+                display: flex;
+                justify-content: space-around;
+                margin: 20px 0;
+                padding: 15px;
+                background: #f7fafc;
+                border-radius: 8px;
+            }}
+            .finding-count {{
+                text-align: center;
+            }}
+            .finding-count .count {{
+                font-size: 24pt;
+                font-weight: bold;
+            }}
+            .finding-count .label {{
+                font-size: 9pt;
+                text-transform: uppercase;
+            }}
+            .finding-count.critical .count {{ color: #c53030; }}
+            .finding-count.high .count {{ color: #dd6b20; }}
+            .finding-count.medium .count {{ color: #d69e2e; }}
+            .finding-count.low .count {{ color: #38a169; }}
+            .risk-matrix {{
+                margin: 20px 0;
+            }}
+            .framework-bar {{
+                background: #e2e8f0;
+                height: 24px;
+                border-radius: 4px;
+                margin: 8px 0;
+                position: relative;
+            }}
+            .framework-bar-fill {{
+                height: 100%;
+                border-radius: 4px;
+                background: linear-gradient(90deg, #3182ce 0%, #2c5282 100%);
+            }}
+            .framework-bar-label {{
+                position: absolute;
+                right: 10px;
+                top: 3px;
+                font-size: 9pt;
+                font-weight: 600;
+                color: #2d3748;
             }}
             .footer {{
                 margin-top: 40px;
                 padding-top: 20px;
-                border-top: 1px solid #e2e8f0;
-                font-size: 12px;
+                border-top: 2px solid #e2e8f0;
+                font-size: 9pt;
                 color: #718096;
+            }}
+            .disclaimer {{
+                background: #fffaf0;
+                border: 1px solid #ed8936;
+                padding: 15px;
+                border-radius: 4px;
+                margin: 20px 0;
+                font-size: 9pt;
+            }}
+            .page-break {{
+                page-break-before: always;
             }}
         </style>
     </head>
     <body>
-        <h1>Vendor Security Compliance Report</h1>
-
-        <p><strong>Analysis ID:</strong> {analysis_id}</p>
-        <p><strong>Generated:</strong> {datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")}</p>
-        <p><strong>Frameworks:</strong> {", ".join(job.get("frameworks", []))}</p>
-
-        <div class="score-card">
-            <p>Overall Compliance Score</p>
-            <p class="score">{results.get("overall_compliance_score", 0):.1f}%</p>
+        <!-- Cover Page -->
+        <div class="cover-page">
+            <div class="cover-title">Vendor Security<br>Assessment Report</div>
+            <div class="cover-subtitle">Third-Party Risk Analysis &amp; Compliance Review</div>
+            <div class="cover-meta">
+                <p><strong>Report ID:</strong> {analysis_id[:16].upper()}</p>
+                <p><strong>Assessment Date:</strong> {datetime.utcnow().strftime("%B %d, %Y")}</p>
+                <p><strong>Frameworks Evaluated:</strong> {", ".join(job.get("frameworks", []))}</p>
+                <p><strong>Classification:</strong> CONFIDENTIAL</p>
+            </div>
         </div>
 
-        <h2>Executive Summary</h2>
-        <div class="executive-summary">
-            {results.get("executive_summary", "No summary available.")}
+        <!-- Executive Summary -->
+        <h1>1. Executive Summary</h1>
+        <div class="section">
+            <div class="executive-summary">
+                {results.get("executive_summary", "No summary available.")}
+            </div>
+
+            <div class="score-container">
+                <div class="score-box primary">
+                    <div class="score-label">Overall Compliance</div>
+                    <div class="score-value">{results.get("overall_compliance_score", 0):.0f}%</div>
+                    <div class="score-sublabel">Composite Score</div>
+                </div>
+                <div class="score-box inherent">
+                    <div class="score-label">Inherent Risk</div>
+                    <div class="score-value" style="color: #c53030;">{inherent_score:.0f}</div>
+                    <div class="score-sublabel">{inherent_level}</div>
+                </div>
+                <div class="score-box residual">
+                    <div class="score-label">Residual Risk</div>
+                    <div class="score-value" style="color: #d69e2e;">{residual_score:.0f}</div>
+                    <div class="score-sublabel">{residual_level} ({risk_reduction:.0f}% reduction)</div>
+                </div>
+            </div>
         </div>
 
-        <h2>Framework Coverage</h2>
-        <table>
-            <tr>
-                <th>Framework</th>
-                <th>Coverage</th>
-                <th>Implemented</th>
-                <th>Partial</th>
-                <th>Missing</th>
-            </tr>
-            {"".join(f'''
-            <tr>
-                <td>{fw.get("framework", "")}</td>
-                <td>{fw.get("coverage_percentage", 0):.1f}%</td>
-                <td>{fw.get("implemented_controls", 0)}</td>
-                <td>{fw.get("partial_controls", 0)}</td>
-                <td>{fw.get("missing_controls", 0)}</td>
-            </tr>
-            ''' for fw in results.get("frameworks", []))}
-        </table>
+        <!-- Findings Overview -->
+        <h1>2. Findings Overview</h1>
+        <div class="section">
+            <div class="findings-summary">
+                <div class="finding-count critical">
+                    <div class="count">{severity_counts["critical"]}</div>
+                    <div class="label">Critical</div>
+                </div>
+                <div class="finding-count high">
+                    <div class="count">{severity_counts["high"]}</div>
+                    <div class="label">High</div>
+                </div>
+                <div class="finding-count medium">
+                    <div class="count">{severity_counts["medium"]}</div>
+                    <div class="label">Medium</div>
+                </div>
+                <div class="finding-count low">
+                    <div class="count">{severity_counts["low"]}</div>
+                    <div class="label">Low</div>
+                </div>
+            </div>
 
-        <h2>Findings</h2>
-        <table>
-            <tr>
-                <th>Severity</th>
-                <th>Category</th>
-                <th>Title</th>
-                <th>Recommendation</th>
-            </tr>
-            {"".join(f'''
-            <tr>
-                <td class="severity-{f.get("severity", "").lower()}">{f.get("severity", "").upper()}</td>
-                <td>{f.get("category", "")}</td>
-                <td>{f.get("title", "")}</td>
-                <td>{f.get("recommendation", "")}</td>
-            </tr>
-            ''' for f in results.get("findings", []))}
-        </table>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Severity</th>
+                        <th style="width: 120px;">Category</th>
+                        <th>Finding</th>
+                        <th>Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {"".join(f'''
+                    <tr>
+                        <td><span class="severity-badge severity-{f.get("severity", "").lower()}">{f.get("severity", "").upper()}</span></td>
+                        <td>{f.get("category", "").replace("_", " ").title()}</td>
+                        <td><strong>{f.get("title", "")}</strong><br><span style="color: #718096; font-size: 8pt;">{f.get("description", "")}</span></td>
+                        <td>{f.get("recommendation", "")}</td>
+                    </tr>
+                    ''' for f in findings)}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Framework Coverage -->
+        <h1 class="page-break">3. Framework Coverage Analysis</h1>
+        <div class="section">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Framework</th>
+                        <th style="width: 100px;">Coverage</th>
+                        <th style="width: 80px;">Implemented</th>
+                        <th style="width: 80px;">Partial</th>
+                        <th style="width: 80px;">Missing</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {"".join(f'''
+                    <tr>
+                        <td><strong>{fw.get("framework", "")}</strong></td>
+                        <td>
+                            <div class="framework-bar">
+                                <div class="framework-bar-fill" style="width: {fw.get("coverage_percentage", 0)}%;"></div>
+                                <span class="framework-bar-label">{fw.get("coverage_percentage", 0):.0f}%</span>
+                            </div>
+                        </td>
+                        <td style="text-align: center; color: #38a169; font-weight: 600;">{fw.get("implemented_controls", 0)}</td>
+                        <td style="text-align: center; color: #d69e2e; font-weight: 600;">{fw.get("partial_controls", 0)}</td>
+                        <td style="text-align: center; color: #c53030; font-weight: 600;">{fw.get("missing_controls", 0)}</td>
+                    </tr>
+                    ''' for fw in results.get("frameworks", []))}
+                </tbody>
+            </table>
+        </div>
 
         {"" if not results.get("risk_assessment") else f'''
-        <h2>Risk Assessment</h2>
-        <table>
-            <tr>
-                <th>Metric</th>
-                <th>Value</th>
-            </tr>
-            <tr>
-                <td>Inherent Risk</td>
-                <td>{results["risk_assessment"].get("inherent_risk_level", "N/A")} ({results["risk_assessment"].get("inherent_risk_score", 0):.1f})</td>
-            </tr>
-            <tr>
-                <td>Residual Risk</td>
-                <td>{results["risk_assessment"].get("residual_risk_level", "N/A")} ({results["risk_assessment"].get("residual_risk_score", 0):.1f})</td>
-            </tr>
-            <tr>
-                <td>Risk Reduction</td>
-                <td>{results["risk_assessment"].get("risk_reduction_percentage", 0):.1f}%</td>
-            </tr>
-        </table>
+        <!-- Risk Assessment -->
+        <h1>4. Risk Assessment</h1>
+        <div class="section">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Risk Metric</th>
+                        <th>Score</th>
+                        <th>Rating</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Inherent Risk</strong></td>
+                        <td style="text-align: center; font-weight: 600;">{inherent_score:.1f}</td>
+                        <td><span class="severity-badge severity-high">{inherent_level}</span></td>
+                        <td>Risk level before considering existing controls</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Residual Risk</strong></td>
+                        <td style="text-align: center; font-weight: 600;">{residual_score:.1f}</td>
+                        <td><span class="severity-badge severity-medium">{residual_level}</span></td>
+                        <td>Risk level after accounting for implemented controls</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Control Effectiveness</strong></td>
+                        <td style="text-align: center; font-weight: 600;">{risk_reduction:.1f}%</td>
+                        <td><span class="severity-badge severity-low">Moderate</span></td>
+                        <td>Percentage of inherent risk mitigated by controls</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         '''}
 
+        <!-- Disclaimer -->
+        <div class="disclaimer">
+            <strong>Disclaimer:</strong> This assessment is based on the documentation provided and represents a point-in-time evaluation.
+            Findings should be validated with the vendor and reassessed periodically. This report does not constitute legal advice
+            or guarantee compliance with any regulatory framework.
+        </div>
+
+        <!-- Footer -->
         <div class="footer">
-            <p>Generated by Vendor Security Analyzer</p>
-            <p>This report is confidential and intended for authorized recipients only.</p>
+            <p><strong>Generated by:</strong> Vendor Security Analyzer</p>
+            <p><strong>Report Generated:</strong> {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}</p>
+            <p style="margin-top: 10px;">This document contains confidential information intended solely for the authorized recipient(s).
+            Unauthorized distribution, copying, or disclosure is strictly prohibited.</p>
         </div>
     </body>
     </html>
