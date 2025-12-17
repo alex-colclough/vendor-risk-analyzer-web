@@ -82,6 +82,89 @@ npm run dev
 
 Open http://localhost:3001 in your browser.
 
+## Docker Deployment
+
+The easiest way to run the application is using Docker.
+
+### Prerequisites
+
+- Docker and Docker Compose installed
+- AWS credentials with Bedrock access
+
+### Quick Start with Docker
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/alex-colclough/vendor-risk-analyer-web.git
+   cd vendor-risk-analyer-web
+   ```
+
+2. **Configure environment variables:**
+   ```bash
+   cp .env.example .env
+   ```
+
+   Edit `.env` with your AWS credentials:
+   ```env
+   AWS_REGION=us-east-1
+   AWS_ACCESS_KEY_ID=your_access_key_here
+   AWS_SECRET_ACCESS_KEY=your_secret_key_here
+   BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
+   ```
+
+3. **Build and start the containers:**
+   ```bash
+   docker compose up --build
+   ```
+
+   Or run in detached mode:
+   ```bash
+   docker compose up --build -d
+   ```
+
+4. **Access the application:**
+   - Frontend: http://localhost:3001
+   - Backend API: http://localhost:8000
+   - API Health Check: http://localhost:8000/health
+
+### Docker Commands
+
+| Command | Description |
+|---------|-------------|
+| `docker compose up --build` | Build and start all services |
+| `docker compose up -d` | Start services in background |
+| `docker compose down` | Stop all services |
+| `docker compose logs -f` | View logs (follow mode) |
+| `docker compose logs backend` | View backend logs only |
+| `docker compose logs frontend` | View frontend logs only |
+| `docker compose ps` | Check container status |
+| `docker compose restart` | Restart all services |
+
+### Container Details
+
+| Service | Port | Description |
+|---------|------|-------------|
+| `backend` | 8000 | FastAPI server with WebSocket support |
+| `frontend` | 3001 | Next.js production server |
+
+### Volumes
+
+- `upload_data`: Persists uploaded files between container restarts
+
+### Rebuilding After Changes
+
+If you make changes to the code:
+```bash
+docker compose down
+docker compose up --build
+```
+
+To rebuild a specific service:
+```bash
+docker compose build backend
+docker compose up -d
+```
+
 ## Configuration
 
 ### Backend Environment Variables
