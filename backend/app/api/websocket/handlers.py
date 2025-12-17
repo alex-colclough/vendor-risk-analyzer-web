@@ -468,6 +468,15 @@ async def run_analysis_with_streaming(
                 current_step=f"Analyzed {uploaded_file.original_name}",
             )
 
+            # Add delay between documents to avoid rate limiting
+            if i < total_files - 1:
+                await emitter.emit(
+                    WebSocketEventType.DOCUMENT_ANALYZING,
+                    "Waiting before next document to avoid rate limits...",
+                    progress_override=5 + (i + 1) * file_progress_share,
+                )
+                await asyncio.sleep(3)  # 3 second delay between documents
+
         # Consolidate and deduplicate
         await emitter.emit(
             WebSocketEventType.DOCUMENT_ANALYZING,

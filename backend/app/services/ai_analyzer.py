@@ -1,16 +1,24 @@
 """AI-powered document analysis service using AWS Bedrock."""
 
+import asyncio
 import json
+import random
 from typing import Optional
 
 import boto3
 from botocore.config import Config
+from botocore.exceptions import ClientError
 
 from app.config import settings
 
 
 class AIAnalyzer:
     """Analyze security documents using Claude via AWS Bedrock."""
+
+    # Retry configuration for rate limiting
+    MAX_RETRIES = 5
+    BASE_DELAY = 2  # seconds
+    MAX_DELAY = 60  # seconds
 
     def __init__(self):
         self._client = None
@@ -21,8 +29,8 @@ class AIAnalyzer:
         if self._client is None:
             config = Config(
                 connect_timeout=30,
-                read_timeout=120,
-                retries={"max_attempts": 2},
+                read_timeout=180,  # Increased for longer documents
+                retries={"max_attempts": 0},  # We handle retries ourselves
             )
             self._client = boto3.client(
                 "bedrock-runtime",
@@ -30,6 +38,32 @@ class AIAnalyzer:
                 config=config,
             )
         return self._client
+
+    async def _retry_with_backoff(self, func, *args, **kwargs):
+        """Execute a function with exponential backoff on throttling errors."""
+        last_exception = None
+
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                return func(*args, **kwargs)
+            except ClientError as e:
+                error_code = e.response.get("Error", {}).get("Code", "")
+
+                if error_code in ("ThrottlingException", "TooManyRequestsException", "ServiceUnavailableException"):
+                    last_exception = e
+                    # Exponential backoff with jitter
+                    delay = min(self.MAX_DELAY, self.BASE_DELAY * (2 ** attempt))
+                    jitter = random.uniform(0, delay * 0.5)
+                    wait_time = delay + jitter
+
+                    print(f"Rate limited (attempt {attempt + 1}/{self.MAX_RETRIES}), waiting {wait_time:.1f}s...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    # Non-throttling error, don't retry
+                    raise
+
+        # All retries exhausted
+        raise last_exception or Exception("Max retries exceeded")
 
     async def analyze_document(
         self,
@@ -153,7 +187,7 @@ Respond ONLY with valid JSON, no additional text."""
             }
 
     async def _invoke_model(self, prompt: str) -> str:
-        """Invoke the Bedrock model and return the response text."""
+        """Invoke the Bedrock model and return the response text with retry logic."""
         request_body = {
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": 8000,
@@ -161,13 +195,15 @@ Respond ONLY with valid JSON, no additional text."""
             "messages": [{"role": "user", "content": prompt}],
         }
 
-        response = self.client.invoke_model(
-            modelId=settings.bedrock_model_id,
-            body=json.dumps(request_body),
-            contentType="application/json",
-            accept="application/json",
-        )
+        def make_request():
+            return self.client.invoke_model(
+                modelId=settings.bedrock_model_id,
+                body=json.dumps(request_body),
+                contentType="application/json",
+                accept="application/json",
+            )
 
+        response = await self._retry_with_backoff(make_request)
         response_body = json.loads(response["body"].read())
         return response_body["content"][0]["text"]
 
