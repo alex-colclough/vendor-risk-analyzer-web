@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     aws_region: str = Field(default="us-east-1")
     aws_role_arn: Optional[str] = Field(default=None)
 
+    # Bedrock API Key (recommended - simpler than IAM credentials)
+    # Set AWS_BEARER_TOKEN_BEDROCK environment variable to use API key auth
+    aws_bearer_token_bedrock: Optional[str] = Field(default=None)
+
     # Bedrock Configuration
     bedrock_model_id: str = Field(
         default="anthropic.claude-3-5-sonnet-20241022-v2:0"

@@ -11,6 +11,9 @@ services:
       - DEBUG=false
       - ENVIRONMENT=production
       - AWS_REGION=${AWS_REGION:-us-east-1}
+      # Bedrock API Key (recommended - simpler authentication)
+      - AWS_BEARER_TOKEN_BEDROCK=${AWS_BEARER_TOKEN_BEDROCK}
+      # Alternative: IAM credentials (if not using API key)
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-anthropic.claude-3-5-sonnet-20241022-v2:0}

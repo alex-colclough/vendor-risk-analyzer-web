@@ -23,8 +23,14 @@ AI-powered compliance analysis for vendor security assessments. This web applica
 
 - Node.js 18+
 - Python 3.11+
-- AWS credentials configured with Bedrock access
+- AWS Bedrock API Key (recommended) or IAM credentials with Bedrock access
 - libmagic (for file type detection)
+
+### Creating a Bedrock API Key
+
+1. Go to the [AWS Bedrock Console](https://console.aws.amazon.com/bedrock/home#/api-keys)
+2. Click "Create API key"
+3. Copy the generated key and save it securely
 
 ### Installing libmagic
 
@@ -104,12 +110,18 @@ The easiest way to run the application is using Docker.
    cp .env.example .env
    ```
 
-   Edit `.env` with your AWS credentials:
+   Edit `.env` with your Bedrock API key (recommended):
    ```env
+   AWS_BEARER_TOKEN_BEDROCK=your_bedrock_api_key_here
    AWS_REGION=us-east-1
+   BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
+   ```
+
+   Or use IAM credentials (alternative):
+   ```env
    AWS_ACCESS_KEY_ID=your_access_key_here
    AWS_SECRET_ACCESS_KEY=your_secret_key_here
-   BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
+   AWS_REGION=us-east-1
    ```
 
 3. **Build and start the containers:**
@@ -169,10 +181,20 @@ docker compose up -d
 
 ### Backend Environment Variables
 
+#### AWS Authentication (choose one)
+
+| Variable | Description |
+|----------|-------------|
+| `AWS_BEARER_TOKEN_BEDROCK` | **Recommended**: Bedrock API key for simple authentication |
+| `AWS_ACCESS_KEY_ID` | Alternative: IAM access key ID |
+| `AWS_SECRET_ACCESS_KEY` | Alternative: IAM secret access key |
+| `AWS_ROLE_ARN` | Optional: IAM role ARN for role assumption |
+
+#### Configuration
+
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `AWS_REGION` | AWS region for Bedrock | `us-east-1` |
-| `AWS_ROLE_ARN` | IAM role ARN (optional) | - |
 | `BEDROCK_MODEL_ID` | Claude model ID | `anthropic.claude-3-5-sonnet-20241022-v2:0` |
 | `BEDROCK_MAX_TOKENS` | Max response tokens | `4096` |
 | `BEDROCK_TEMPERATURE` | Model temperature | `0.3` |

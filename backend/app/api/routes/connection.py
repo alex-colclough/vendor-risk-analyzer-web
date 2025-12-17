@@ -78,7 +78,7 @@ async def test_connection(request: Optional[ConnectionTestRequest] = None):
             region=region,
             model_id=model_id,
             message="AWS credentials not found",
-            error="No valid AWS credentials found. Configure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY or use IAM roles.",
+            error="No valid AWS credentials found. Set AWS_BEARER_TOKEN_BEDROCK (recommended) or configure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.",
         )
     except ClientError as e:
         error_code = e.response.get("Error", {}).get("Code", "Unknown")
