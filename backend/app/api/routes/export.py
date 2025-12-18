@@ -490,71 +490,8 @@ async def generate_pdf_report(
         </div>
         ''' for i, f in enumerate(findings))}
 
-        <!-- Remediation Roadmap -->
-        <h1 class="page-break">4. Remediation Roadmap</h1>
-        <div class="section">
-            <p style="margin-bottom: 15px; color: #4a5568;">The following prioritized remediation plan is recommended based on risk severity and business impact:</p>
-
-            <h3 style="color: #c53030;">Immediate Priority (0-30 days)</h3>
-            <table style="margin-bottom: 20px;">
-                <thead>
-                    <tr>
-                        <th>Finding</th>
-                        <th style="width: 80px;">Severity</th>
-                        <th>Recommended Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {"".join(f'''<tr>
-                        <td>{f.get("title", "")}</td>
-                        <td><span class="severity-badge severity-{f.get("severity", "").lower()}">{f.get("severity", "").upper()}</span></td>
-                        <td>{f.get("recommendation", "")}</td>
-                    </tr>''' for f in findings if f.get("severity", "").lower() in ["critical", "high"])}
-                    {"<tr><td colspan='3' style='text-align: center; color: #718096;'>No critical or high severity findings identified.</td></tr>" if not any(f.get("severity", "").lower() in ["critical", "high"] for f in findings) else ""}
-                </tbody>
-            </table>
-
-            <h3 style="color: #d69e2e;">Short-term Priority (30-90 days)</h3>
-            <table style="margin-bottom: 20px;">
-                <thead>
-                    <tr>
-                        <th>Finding</th>
-                        <th style="width: 80px;">Severity</th>
-                        <th>Recommended Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {"".join(f'''<tr>
-                        <td>{f.get("title", "")}</td>
-                        <td><span class="severity-badge severity-{f.get("severity", "").lower()}">{f.get("severity", "").upper()}</span></td>
-                        <td>{f.get("recommendation", "")}</td>
-                    </tr>''' for f in findings if f.get("severity", "").lower() == "medium")}
-                    {"<tr><td colspan='3' style='text-align: center; color: #718096;'>No medium severity findings identified.</td></tr>" if not any(f.get("severity", "").lower() == "medium" for f in findings) else ""}
-                </tbody>
-            </table>
-
-            <h3 style="color: #38a169;">Long-term Improvements (90+ days)</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Finding</th>
-                        <th style="width: 80px;">Severity</th>
-                        <th>Recommended Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {"".join(f'''<tr>
-                        <td>{f.get("title", "")}</td>
-                        <td><span class="severity-badge severity-{f.get("severity", "").lower()}">{f.get("severity", "").upper()}</span></td>
-                        <td>{f.get("recommendation", "")}</td>
-                    </tr>''' for f in findings if f.get("severity", "").lower() == "low")}
-                    {"<tr><td colspan='3' style='text-align: center; color: #718096;'>No low severity findings identified.</td></tr>" if not any(f.get("severity", "").lower() == "low" for f in findings) else ""}
-                </tbody>
-            </table>
-        </div>
-
         <!-- Framework Coverage -->
-        <h1 class="page-break">5. Framework Coverage Analysis</h1>
+        <h1 class="page-break">4. Framework Coverage Analysis</h1>
         <div class="section">
             <table>
                 <thead>
@@ -587,7 +524,7 @@ async def generate_pdf_report(
 
         {"" if not results.get("risk_assessment") else f'''
         <!-- Risk Assessment -->
-        <h1>6. Risk Assessment</h1>
+        <h1>5. Risk Assessment</h1>
         <div class="section">
             <table>
                 <thead>
@@ -623,7 +560,7 @@ async def generate_pdf_report(
         '''}
 
         <!-- Signature Block -->
-        <h1 class="page-break">8. Assessment Sign-Off</h1>
+        <h1 class="page-break">6. Assessment Sign-Off</h1>
         <div class="section">
             <table style="width: 100%; border: 2px solid #2d3748; border-radius: 8px;">
                 <tbody>
@@ -675,7 +612,7 @@ async def generate_pdf_report(
         </div>
 
         <!-- Assessment Methodology -->
-        <h1 class="page-break">9. Assessment Methodology</h1>
+        <h1 class="page-break">7. Assessment Methodology</h1>
         <div class="section">
             <h3>Scope and Approach</h3>
             <p>This third-party risk assessment was conducted using a risk-based methodology aligned with industry best practices including NIST, ISO 27001, and SOC 2 Trust Services Criteria. The assessment evaluated the vendor's security controls based on documentation provided.</p>
