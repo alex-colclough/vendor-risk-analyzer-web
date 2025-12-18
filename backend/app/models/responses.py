@@ -86,11 +86,10 @@ class FrameworkCoverage(BaseModel):
 class RiskAssessment(BaseModel):
     """Risk assessment summary."""
 
-    inherent_risk_level: str
-    inherent_risk_score: float
-    residual_risk_level: str
-    residual_risk_score: float
-    risk_reduction_percentage: float
+    security_posture_score: float
+    security_posture_level: str
+    overall_risk_score: float
+    overall_risk_level: str
 
 
 class AnalysisResultsResponse(BaseModel):
