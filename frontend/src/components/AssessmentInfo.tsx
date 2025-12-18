@@ -35,6 +35,7 @@ export function AssessmentInfo() {
             placeholder="Enter vendor name (e.g., Acme Corp)"
             value={vendorName}
             onChange={(e) => setVendorName(e.target.value)}
+            maxLength={100}
           />
           <p className="text-xs text-muted-foreground">
             Used in the report title and exported filename
@@ -51,6 +52,7 @@ export function AssessmentInfo() {
             placeholder="Enter analyst name"
             value={reviewedBy}
             onChange={(e) => setReviewedBy(e.target.value)}
+            maxLength={100}
           />
           <p className="text-xs text-muted-foreground">
             Name of the analyst performing the review
@@ -67,6 +69,7 @@ export function AssessmentInfo() {
             placeholder="Enter ticket or request number"
             value={ticketNumber}
             onChange={(e) => setTicketNumber(e.target.value)}
+            maxLength={50}
           />
           <p className="text-xs text-muted-foreground">
             Reference number for tracking (e.g., JIRA-1234)

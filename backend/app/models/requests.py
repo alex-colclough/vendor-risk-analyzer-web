@@ -1,8 +1,33 @@
 """API request models with validation."""
 
+import re
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
+
+
+def sanitize_text_input(value: Optional[str]) -> Optional[str]:
+    """Sanitize text input to prevent XSS and injection attacks."""
+    if value is None:
+        return None
+
+    # Remove control characters (except newline and tab)
+    sanitized = "".join(c for c in value if c.isprintable() or c in "\n\t")
+
+    # Remove HTML/script tags
+    sanitized = re.sub(r'<[^>]*>', '', sanitized)
+
+    # Remove potentially dangerous characters for HTML context
+    sanitized = sanitized.replace('&', '&amp;')
+    sanitized = sanitized.replace('<', '&lt;')
+    sanitized = sanitized.replace('>', '&gt;')
+    sanitized = sanitized.replace('"', '&quot;')
+    sanitized = sanitized.replace("'", '&#x27;')
+
+    # Strip leading/trailing whitespace
+    sanitized = sanitized.strip()
+
+    return sanitized if sanitized else None
 
 
 class AnalysisRequest(BaseModel):
@@ -52,6 +77,12 @@ class AnalysisRequest(BaseModel):
         if not all(c.isalnum() or c == "-" for c in v):
             raise ValueError("Session ID must be alphanumeric with hyphens only")
         return v
+
+    @field_validator("vendor_name", "reviewed_by", "ticket_number")
+    @classmethod
+    def sanitize_assessment_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize assessment info fields to prevent XSS/injection."""
+        return sanitize_text_input(v)
 
 
 class ChatRequest(BaseModel):
