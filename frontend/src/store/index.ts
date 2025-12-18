@@ -12,6 +12,11 @@ interface AppState {
   // Session
   sessionId: string;
 
+  // Assessment Info
+  vendorName: string;
+  reviewedBy: string;
+  ticketNumber: string;
+
   // Upload state
   uploadedFiles: UploadedFile[];
   isUploading: boolean;
@@ -37,6 +42,9 @@ interface AppState {
 
   // Actions
   setSessionId: (id: string) => void;
+  setVendorName: (name: string) => void;
+  setReviewedBy: (name: string) => void;
+  setTicketNumber: (ticket: string) => void;
   addFile: (file: UploadedFile) => void;
   removeFile: (fileId: string) => void;
   setFiles: (files: UploadedFile[]) => void;
@@ -58,6 +66,9 @@ interface AppState {
 
 const initialState = {
   sessionId: generateSessionId(),
+  vendorName: '',
+  reviewedBy: '',
+  ticketNumber: '',
   uploadedFiles: [],
   isUploading: false,
   selectedFrameworks: ['SOC2', 'ISO27001', 'NIST_CSF'],
@@ -75,6 +86,12 @@ export const useStore = create<AppState>((set) => ({
   ...initialState,
 
   setSessionId: (id) => set({ sessionId: id }),
+
+  setVendorName: (name) => set({ vendorName: name }),
+
+  setReviewedBy: (name) => set({ reviewedBy: name }),
+
+  setTicketNumber: (ticket) => set({ ticketNumber: ticket }),
 
   addFile: (file) =>
     set((state) => ({

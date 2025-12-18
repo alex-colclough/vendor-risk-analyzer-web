@@ -75,7 +75,13 @@ export const api = {
   },
 
   // Analysis
-  async startAnalysis(sessionId: string, frameworks: string[], vendorName?: string) {
+  async startAnalysis(
+    sessionId: string,
+    frameworks: string[],
+    vendorName?: string,
+    reviewedBy?: string,
+    ticketNumber?: string
+  ) {
     return fetchApi<{
       analysis_id: string;
       session_id: string;
@@ -87,6 +93,8 @@ export const api = {
         session_id: sessionId,
         frameworks,
         vendor_name: vendorName || undefined,
+        reviewed_by: reviewedBy || undefined,
+        ticket_number: ticketNumber || undefined,
       }),
     });
   },

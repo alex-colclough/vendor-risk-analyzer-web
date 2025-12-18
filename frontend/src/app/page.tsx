@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { FileDropzone } from '@/components/FileDropzone';
 import { FrameworkSelector } from '@/components/FrameworkSelector';
+import { AssessmentInfo } from '@/components/AssessmentInfo';
 import { AnalysisPanel } from '@/components/AnalysisPanel';
 import { ResultsDashboard } from '@/components/ResultsDashboard';
 import { ChatWindow } from '@/components/ChatWindow';
@@ -58,6 +59,9 @@ export default function Home() {
           {/* Upload and Configuration */}
           {analysisStatus !== 'completed' && (
             <>
+              {/* Assessment Info */}
+              <AssessmentInfo />
+
               <div className="grid md:grid-cols-2 gap-6">
                 <FileDropzone />
                 <FrameworkSelector />

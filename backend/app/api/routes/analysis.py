@@ -53,6 +53,8 @@ async def start_analysis(request: AnalysisRequest):
         "session_id": request.session_id,
         "frameworks": request.frameworks,
         "vendor_name": request.vendor_name,
+        "reviewed_by": request.reviewed_by,
+        "ticket_number": request.ticket_number,
         "status": AnalysisStatus.PENDING,
         "progress": 0,
         "current_step": None,

@@ -17,6 +17,9 @@ export function AnalysisPanel() {
     sessionId,
     uploadedFiles,
     selectedFrameworks,
+    vendorName,
+    reviewedBy,
+    ticketNumber,
     analysisId,
     analysisStatus,
     progress,
@@ -75,37 +78,6 @@ export function AnalysisPanel() {
     }
   );
 
-  // Extract vendor name from uploaded filenames
-  const extractVendorName = (): string | undefined => {
-    if (uploadedFiles.length === 0) return undefined;
-
-    // Get the first file's name and try to extract a vendor name
-    const filename = uploadedFiles[0].original_name;
-
-    // Remove file extension
-    const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
-
-    // Common patterns: "VendorName Security Policy", "VendorName_SOC2_Report"
-    // Take the first word or words before common document type keywords
-    const docTypeKeywords = [
-      'security', 'soc2', 'soc', 'iso', 'policy', 'report', 'compliance',
-      'assessment', 'audit', 'framework', 'document', 'redacted', 'type',
-      'business', 'continuity', 'disaster', 'recovery', 'planning', 'it'
-    ];
-
-    // Split by common separators
-    const parts = nameWithoutExt.split(/[_\-\s]+/);
-
-    // Take parts until we hit a document type keyword
-    const vendorParts: string[] = [];
-    for (const part of parts) {
-      if (docTypeKeywords.includes(part.toLowerCase())) break;
-      if (part.length > 1) vendorParts.push(part);
-    }
-
-    return vendorParts.length > 0 ? vendorParts.join(' ') : undefined;
-  };
-
   const handleStartAnalysis = async () => {
     if (uploadedFiles.length === 0) {
       toast({
@@ -129,11 +101,14 @@ export function AnalysisPanel() {
     setProgress(0);
     clearProgressMessages();
 
-    // Extract vendor name from uploaded files
-    const vendorName = extractVendorName();
-
-    // Start analysis via API
-    const response = await api.startAnalysis(sessionId, selectedFrameworks, vendorName);
+    // Start analysis via API with assessment info
+    const response = await api.startAnalysis(
+      sessionId,
+      selectedFrameworks,
+      vendorName || undefined,
+      reviewedBy || undefined,
+      ticketNumber || undefined
+    );
 
     if (response.error) {
       setAnalysisStatus('error');

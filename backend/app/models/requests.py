@@ -16,7 +16,17 @@ class AnalysisRequest(BaseModel):
     vendor_name: Optional[str] = Field(
         default=None,
         max_length=100,
-        description="Vendor name for the report (extracted from files if not provided)",
+        description="Vendor name for the report",
+    )
+    reviewed_by: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="Name of the analyst performing the review",
+    )
+    ticket_number: Optional[str] = Field(
+        default=None,
+        max_length=50,
+        description="Ticket or request number for tracking",
     )
 
     @field_validator("frameworks")
