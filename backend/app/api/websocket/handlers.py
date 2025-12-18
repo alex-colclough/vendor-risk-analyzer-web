@@ -566,12 +566,14 @@ async def run_analysis_with_streaming(
             }
 
         # Generate AI-powered executive summary
+        vendor_name = job.get("vendor_name")
         results["executive_summary"] = await ai_analyzer.generate_consolidated_summary(
             all_findings=deduplicated_findings,
             all_strengths=all_strengths,
             framework_coverage=framework_coverage_dict,
             document_count=total_files,
             soc2_count=soc2_count,
+            vendor_name=vendor_name,
         )
 
         # Calculate overall score

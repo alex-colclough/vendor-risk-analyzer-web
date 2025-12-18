@@ -52,6 +52,7 @@ async def start_analysis(request: AnalysisRequest):
     analysis_jobs[analysis_id] = {
         "session_id": request.session_id,
         "frameworks": request.frameworks,
+        "vendor_name": request.vendor_name,
         "status": AnalysisStatus.PENDING,
         "progress": 0,
         "current_step": None,

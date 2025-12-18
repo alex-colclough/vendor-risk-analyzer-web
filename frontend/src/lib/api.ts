@@ -75,7 +75,7 @@ export const api = {
   },
 
   // Analysis
-  async startAnalysis(sessionId: string, frameworks: string[]) {
+  async startAnalysis(sessionId: string, frameworks: string[], vendorName?: string) {
     return fetchApi<{
       analysis_id: string;
       session_id: string;
@@ -83,7 +83,11 @@ export const api = {
       message: string;
     }>('/api/v1/analysis/start', {
       method: 'POST',
-      body: JSON.stringify({ session_id: sessionId, frameworks }),
+      body: JSON.stringify({
+        session_id: sessionId,
+        frameworks,
+        vendor_name: vendorName || undefined,
+      }),
     });
   },
 

@@ -13,6 +13,11 @@ class AnalysisRequest(BaseModel):
         default=["SOC2", "ISO27001", "NIST_CSF"],
         description="Compliance frameworks to analyze against",
     )
+    vendor_name: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="Vendor name for the report (extracted from files if not provided)",
+    )
 
     @field_validator("frameworks")
     @classmethod

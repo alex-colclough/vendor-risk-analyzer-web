@@ -1,6 +1,7 @@
 """Export endpoints for analysis results."""
 
 import json
+import re
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
@@ -10,6 +11,16 @@ from app.api.routes.analysis import analysis_jobs
 from app.models.responses import AnalysisStatus
 
 router = APIRouter()
+
+
+def sanitize_filename(name: str) -> str:
+    """Sanitize a string for use in a filename."""
+    if not name:
+        return ""
+    # Replace spaces with underscores, remove unsafe characters
+    sanitized = re.sub(r'[^\w\s-]', '', name)
+    sanitized = re.sub(r'[\s]+', '_', sanitized)
+    return sanitized[:50]  # Limit length
 
 
 @router.get("/export/json/{analysis_id}")
@@ -42,6 +53,7 @@ async def export_json(analysis_id: str):
     export_data = {
         "analysis_id": analysis_id,
         "session_id": job["session_id"],
+        "vendor_name": job.get("vendor_name"),
         "frameworks_analyzed": job["frameworks"],
         "started_at": job["started_at"].isoformat() if job.get("started_at") else None,
         "completed_at": (
@@ -50,9 +62,14 @@ async def export_json(analysis_id: str):
         "results": results,
     }
 
-    # Generate filename with timestamp
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    filename = f"compliance_analysis_{timestamp}.json"
+    # Generate filename with vendor name and date
+    date_str = datetime.utcnow().strftime("%Y-%m-%d")
+    vendor_name = job.get("vendor_name")
+    if vendor_name:
+        safe_vendor = sanitize_filename(vendor_name)
+        filename = f"{safe_vendor}_Security_Assessment_{date_str}.json"
+    else:
+        filename = f"Security_Assessment_{date_str}.json"
 
     return Response(
         content=json.dumps(export_data, indent=2, default=str),
@@ -93,8 +110,14 @@ async def export_pdf(analysis_id: str):
     try:
         pdf_bytes = await generate_pdf_report(analysis_id, job, results)
 
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        filename = f"compliance_report_{timestamp}.pdf"
+        # Generate filename with vendor name and date
+        date_str = datetime.utcnow().strftime("%Y-%m-%d")
+        vendor_name = job.get("vendor_name")
+        if vendor_name:
+            safe_vendor = sanitize_filename(vendor_name)
+            filename = f"{safe_vendor}_Security_Assessment_{date_str}.pdf"
+        else:
+            filename = f"Security_Assessment_{date_str}.pdf"
 
         return Response(
             content=pdf_bytes,
@@ -372,8 +395,9 @@ async def generate_pdf_report(
         <!-- Cover Page -->
         <div class="cover-page">
             <div class="cover-title">Vendor Security<br>Assessment Report</div>
-            <div class="cover-subtitle">Third-Party Risk Analysis &amp; Compliance Review</div>
+            <div class="cover-subtitle">{f'<strong>{job.get("vendor_name", "")}</strong><br>' if job.get("vendor_name") else ''}Third-Party Risk Analysis &amp; Compliance Review</div>
             <div class="cover-meta">
+                {f'<p><strong>Vendor:</strong> {job.get("vendor_name")}</p>' if job.get("vendor_name") else ''}
                 <p><strong>Report ID:</strong> {analysis_id[:16].upper()}</p>
                 <p><strong>Assessment Date:</strong> {datetime.utcnow().strftime("%B %d, %Y")}</p>
                 <p><strong>Frameworks Evaluated:</strong> {", ".join(job.get("frameworks", []))}</p>
@@ -428,31 +452,107 @@ async def generate_pdf_report(
                     <div class="label">Low</div>
                 </div>
             </div>
+        </div>
 
-            <table>
+        <!-- Detailed Findings -->
+        <h1 class="page-break">3. Detailed Findings</h1>
+        {"".join(f'''
+        <div class="section" style="margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; page-break-inside: avoid;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span class="severity-badge severity-{f.get("severity", "").lower()}">{f.get("severity", "").upper()}</span>
+                <span style="font-size: 9pt; color: #718096;">{f.get("finding_id", f"F-{i+1:03d}")}</span>
+            </div>
+            <h3 style="margin: 0 0 10px 0; color: #1a365d;">{f.get("title", "Untitled Finding")}</h3>
+            <table style="width: 100%; font-size: 9pt; margin: 0;">
+                <tr>
+                    <td style="width: 120px; font-weight: 600; vertical-align: top; padding: 5px 10px 5px 0; border: none;">Category:</td>
+                    <td style="padding: 5px 0; border: none;">{f.get("category", "").replace("_", " ").title()}</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: 600; vertical-align: top; padding: 5px 10px 5px 0; border: none;">Description:</td>
+                    <td style="padding: 5px 0; border: none;">{f.get("description", "No description provided.")}</td>
+                </tr>
+                {f'<tr><td style="font-weight: 600; vertical-align: top; padding: 5px 10px 5px 0; border: none;">Root Cause:</td><td style="padding: 5px 0; border: none;">{f.get("root_cause")}</td></tr>' if f.get("root_cause") else ""}
+                {f'<tr><td style="font-weight: 600; vertical-align: top; padding: 5px 10px 5px 0; border: none;">Business Impact:</td><td style="padding: 5px 0; border: none; color: #c53030;">{f.get("business_impact")}</td></tr>' if f.get("business_impact") else ""}
+                {f'<tr><td style="font-weight: 600; vertical-align: top; padding: 5px 10px 5px 0; border: none;">Control References:</td><td style="padding: 5px 0; border: none; font-family: monospace; font-size: 8pt;">{", ".join(f.get("control_references", [])) if isinstance(f.get("control_references"), list) else f.get("control_references", "")}</td></tr>' if f.get("control_references") else ""}
+                <tr>
+                    <td style="font-weight: 600; vertical-align: top; padding: 5px 10px 5px 0; border: none;">Evidence:</td>
+                    <td style="padding: 5px 0; border: none; font-style: italic; color: #4a5568;">"{f.get("evidence", "No specific evidence cited.")}"</td>
+                </tr>
+                <tr style="background: #f7fafc;">
+                    <td style="font-weight: 600; vertical-align: top; padding: 8px 10px 8px 0; border: none;">Recommendation:</td>
+                    <td style="padding: 8px 0; border: none; color: #2c5282;">{f.get("recommendation", "No recommendation provided.")}</td>
+                </tr>
+                {f'<tr><td style="font-weight: 600; vertical-align: top; padding: 5px 10px 5px 0; border: none;">Remediation Effort:</td><td style="padding: 5px 0; border: none;"><span style="background: #{"fed7d7" if f.get("remediation_effort") == "high" else "#fefcbf" if f.get("remediation_effort") == "medium" else "#c6f6d5"}; padding: 2px 8px; border-radius: 4px; font-size: 8pt;">{f.get("remediation_effort", "").upper()}</span> &nbsp; <span style="color: #718096;">Timeline: {f.get("remediation_timeline", "To be determined")}</span></td></tr>' if f.get("remediation_effort") else ""}
+            </table>
+        </div>
+        ''' for i, f in enumerate(findings))}
+
+        <!-- Remediation Roadmap -->
+        <h1 class="page-break">4. Remediation Roadmap</h1>
+        <div class="section">
+            <p style="margin-bottom: 15px; color: #4a5568;">The following prioritized remediation plan is recommended based on risk severity and business impact:</p>
+
+            <h3 style="color: #c53030;">Immediate Priority (0-30 days)</h3>
+            <table style="margin-bottom: 20px;">
                 <thead>
                     <tr>
-                        <th style="width: 80px;">Severity</th>
-                        <th style="width: 120px;">Category</th>
                         <th>Finding</th>
-                        <th>Recommendation</th>
+                        <th style="width: 80px;">Severity</th>
+                        <th>Recommended Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {"".join(f'''
-                    <tr>
+                    {"".join(f'''<tr>
+                        <td>{f.get("title", "")}</td>
                         <td><span class="severity-badge severity-{f.get("severity", "").lower()}">{f.get("severity", "").upper()}</span></td>
-                        <td>{f.get("category", "").replace("_", " ").title()}</td>
-                        <td><strong>{f.get("title", "")}</strong><br><span style="color: #718096; font-size: 8pt;">{f.get("description", "")}</span></td>
                         <td>{f.get("recommendation", "")}</td>
+                    </tr>''' for f in findings if f.get("severity", "").lower() in ["critical", "high"])}
+                    {"<tr><td colspan='3' style='text-align: center; color: #718096;'>No critical or high severity findings identified.</td></tr>" if not any(f.get("severity", "").lower() in ["critical", "high"] for f in findings) else ""}
+                </tbody>
+            </table>
+
+            <h3 style="color: #d69e2e;">Short-term Priority (30-90 days)</h3>
+            <table style="margin-bottom: 20px;">
+                <thead>
+                    <tr>
+                        <th>Finding</th>
+                        <th style="width: 80px;">Severity</th>
+                        <th>Recommended Action</th>
                     </tr>
-                    ''' for f in findings)}
+                </thead>
+                <tbody>
+                    {"".join(f'''<tr>
+                        <td>{f.get("title", "")}</td>
+                        <td><span class="severity-badge severity-{f.get("severity", "").lower()}">{f.get("severity", "").upper()}</span></td>
+                        <td>{f.get("recommendation", "")}</td>
+                    </tr>''' for f in findings if f.get("severity", "").lower() == "medium")}
+                    {"<tr><td colspan='3' style='text-align: center; color: #718096;'>No medium severity findings identified.</td></tr>" if not any(f.get("severity", "").lower() == "medium" for f in findings) else ""}
+                </tbody>
+            </table>
+
+            <h3 style="color: #38a169;">Long-term Improvements (90+ days)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Finding</th>
+                        <th style="width: 80px;">Severity</th>
+                        <th>Recommended Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {"".join(f'''<tr>
+                        <td>{f.get("title", "")}</td>
+                        <td><span class="severity-badge severity-{f.get("severity", "").lower()}">{f.get("severity", "").upper()}</span></td>
+                        <td>{f.get("recommendation", "")}</td>
+                    </tr>''' for f in findings if f.get("severity", "").lower() == "low")}
+                    {"<tr><td colspan='3' style='text-align: center; color: #718096;'>No low severity findings identified.</td></tr>" if not any(f.get("severity", "").lower() == "low" for f in findings) else ""}
                 </tbody>
             </table>
         </div>
 
         <!-- Framework Coverage -->
-        <h1 class="page-break">3. Framework Coverage Analysis</h1>
+        <h1 class="page-break">5. Framework Coverage Analysis</h1>
         <div class="section">
             <table>
                 <thead>
@@ -485,7 +585,7 @@ async def generate_pdf_report(
 
         {"" if not results.get("risk_assessment") else f'''
         <!-- Risk Assessment -->
-        <h1>4. Risk Assessment</h1>
+        <h1>6. Risk Assessment</h1>
         <div class="section">
             <table>
                 <thead>
@@ -520,17 +620,76 @@ async def generate_pdf_report(
         </div>
         '''}
 
+        <!-- Assessment Methodology -->
+        <h1 class="page-break">7. Assessment Methodology</h1>
+        <div class="section">
+            <h3>Scope and Approach</h3>
+            <p>This third-party risk assessment was conducted using a risk-based methodology aligned with industry best practices including NIST, ISO 27001, and SOC 2 Trust Services Criteria. The assessment evaluated the vendor's security controls based on documentation provided.</p>
+
+            <h3>Assessment Procedures</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Document review and analysis of security policies, procedures, and audit reports</li>
+                <li>Control mapping against applicable compliance frameworks</li>
+                <li>Gap analysis comparing documented controls against framework requirements</li>
+                <li>Risk rating based on control effectiveness and potential business impact</li>
+                <li>Deduplication and correlation of findings across multiple documents</li>
+            </ul>
+
+            <h3>Severity Classification</h3>
+            <table style="margin: 15px 0;">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Severity</th>
+                        <th>Definition</th>
+                        <th style="width: 150px;">Expected Resolution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="severity-badge severity-critical">CRITICAL</span></td>
+                        <td>Fundamental security control missing or ineffective; immediate exploitation risk; regulatory violation likely</td>
+                        <td>Immediate (0-30 days)</td>
+                    </tr>
+                    <tr>
+                        <td><span class="severity-badge severity-high">HIGH</span></td>
+                        <td>Material weakness in control design or operation; significant risk exposure requiring urgent remediation</td>
+                        <td>30-60 days</td>
+                    </tr>
+                    <tr>
+                        <td><span class="severity-badge severity-medium">MEDIUM</span></td>
+                        <td>Significant deficiency that should be addressed; control partially effective or inconsistently applied</td>
+                        <td>60-90 days</td>
+                    </tr>
+                    <tr>
+                        <td><span class="severity-badge severity-low">LOW</span></td>
+                        <td>Opportunity for improvement; best practice recommendation; minor gap with limited risk exposure</td>
+                        <td>90+ days</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Limitations</h3>
+            <ul style="margin: 10px 0; padding-left: 20px; color: #718096;">
+                <li>This assessment is based solely on documentation provided and does not include technical testing or on-site verification</li>
+                <li>Findings represent a point-in-time evaluation and may not reflect the current state of controls</li>
+                <li>The assessment does not guarantee the absence of security vulnerabilities or compliance gaps not evident in the documentation</li>
+                <li>Control effectiveness was assessed based on documented evidence; actual operational effectiveness may vary</li>
+            </ul>
+        </div>
+
         <!-- Disclaimer -->
         <div class="disclaimer">
             <strong>Disclaimer:</strong> This assessment is based on the documentation provided and represents a point-in-time evaluation.
             Findings should be validated with the vendor and reassessed periodically. This report does not constitute legal advice
-            or guarantee compliance with any regulatory framework.
+            or guarantee compliance with any regulatory framework. The assessor makes no warranties regarding the accuracy or completeness
+            of vendor-provided documentation.
         </div>
 
         <!-- Footer -->
         <div class="footer">
-            <p><strong>Generated by:</strong> Vendor Security Analyzer</p>
+            <p><strong>Generated by:</strong> Vendor Security Analyzer (AI-Powered Third-Party Risk Assessment)</p>
             <p><strong>Report Generated:</strong> {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}</p>
+            <p><strong>Assessment Frameworks:</strong> {", ".join(job.get("frameworks", []))}</p>
             <p style="margin-top: 10px;">This document contains confidential information intended solely for the authorized recipient(s).
             Unauthorized distribution, copying, or disclosure is strictly prohibited.</p>
         </div>
